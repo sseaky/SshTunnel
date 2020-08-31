@@ -6,7 +6,7 @@ Establish a ppp tunnel over ssh, easy for client residing at the intranet.
 
 ## Requrement
 
-For create a ppp interface, sudo privilege without password required on both server and client.
+For create a ppp interface, **sudo** **privilege without password** required on both server and client.
 
 
 
@@ -15,7 +15,7 @@ For create a ppp interface, sudo privilege without password required on both ser
 Fill the ''#auth' block in the script.
 
 ```bash
-./sh ppp_over_ssh.sh start
+sh ./ppp_over_ssh.sh start
 ```
 
 
