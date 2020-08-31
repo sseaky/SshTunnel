@@ -22,7 +22,7 @@ Fill the ''#auth' block in the script.
 
 ## Example
 
-![](.\img\ppp_over_ssh.png)
+![](./img/ppp_over_ssh.png)
 
 
 
