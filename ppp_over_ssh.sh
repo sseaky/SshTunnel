@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # auth
-SSH_HOST=''
-SSH_PORT=
+SSH_HOST='remote_server'
+SSH_PORT=22
 SSH_USER=''
 SSH_KEYFILE=''
 
