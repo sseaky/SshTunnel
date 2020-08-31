@@ -1,6 +1,6 @@
 ## About
 
-Establish a ppp tunnel over ssh, easy for client who reside in the intranet.
+Establish a ppp tunnel over ssh, easy for client residing at the intranet.
 
 
 
