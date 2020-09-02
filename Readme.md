@@ -1,4 +1,4 @@
-## About
+## Ssh Tunnel
 
 Establish a ppp tunnel over ssh, easy for client residing at the intranet.
 

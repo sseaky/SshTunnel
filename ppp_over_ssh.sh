@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# @Author: Seaky
+# @Date:   2020/9/1 9:30
 
 # auth
 SSH_HOST='remote.server'
