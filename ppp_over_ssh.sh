@@ -15,14 +15,16 @@ CMD_PPPD='/usr/sbin/pppd'
 CMD_SSH='/usr/bin/ssh'
 LOCAL_IFNAME=''
 LOCAL_VPN_IP='10.220.0.102'
-CHECK_INTERVAL=1800
 
 # remote
 REMOTE_IFNAME=''
 REMOTE_VPN_IP='10.222.0.101'
 VPNN=100
-#REMOTE_NETWORK='1.1.1.1 2.2.2.0/24'    # network via remote vpn, split by space
 REMOTE_NETWORK=''
+#REMOTE_NETWORK='1.1.1.1 2.2.2.0/24'    # network via remote vpn, split by space
+
+CHECK_INTERVAL=60
+PROMPT_INTERVAL=3600
 
 # auto set a ifname if it is not assigned
 [ -z $LOCAL_IFNAME ] && LOCAL_IFNAME="to_"${SSH_HOST}
@@ -60,7 +62,8 @@ connect()
             ipparam vpn ${VPNN} ${REMOTE_VPN_IP}:${LOCAL_VPN_IP}"
         [ -n "$REMOTE_NETWORK" ] && for nw in $REMOTE_NETWORK; do sudo ip route add $nw via $REMOTE_VPN_IP; done
     else
-        echo "$(date)  Tunnel ${LOCAL_IFNAME} is running"
+        true
+#        echo "$(date)  Tunnel ${LOCAL_IFNAME} is running"
     fi
 }
 
@@ -76,6 +79,7 @@ disconnect()
 
 start()
 {
+    i=0
     while true
     do
         if [ -f $PID_FILE ]
@@ -86,7 +90,10 @@ start()
             connect
             echo $$ > $PID_FILE
         fi
+        [ $i -eq 0 ] && echo "$(date)  Tunnel ${LOCAL_IFNAME} is running"
         sleep $CHECK_INTERVAL
+        i=$((i+$CHECK_INTERVAL))
+        [ $i -ge $PROMPT_INTERVAL ] && i=0
     done
 }
 
