@@ -7,13 +7,15 @@ SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
 SSH_KEYFILE=''
+# paste the content of the private key to $SSH_KEY for skipping duplicate the key to server
+SSH_KEY=''
 
 # local
 CMD_PPPD='/usr/sbin/pppd'
 CMD_SSH='/usr/bin/ssh'
 LOCAL_IFNAME=''
 LOCAL_VPN_IP='10.220.0.102'
-CHECK_INTERVAL=60
+CHECK_INTERVAL=1800
 
 # remote
 REMOTE_IFNAME=''
@@ -26,15 +28,32 @@ REMOTE_NETWORK=''
 [ -z $LOCAL_IFNAME ] && LOCAL_IFNAME="to_"${SSH_HOST}
 [ -z $REMOTE_IFNAME ] && REMOTE_IFNAME="to_"$(hostname)
 
-PID_FILE="/tmp/"$(basename $0)_${LOCAL_IFNAME}
-SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
+# verify ssh key
+TEMP_KEY=false
+if [ -z "$SSH_KEYFILE" ]
+then
+	if [ -n "$SSH_KEY" ]
+	then
+	    SSH_KEYFILE="$(basename $0)_${LOCAL_IFNAME}.tmpkey"
+        TEMP_KEY=true
+	fi
+fi
 
+[ -z "$SSH_KEYFILE" ] && echo "no ssh key given." && exit 1
+
+PID_FILE="$(basename $0)_${LOCAL_IFNAME}.pid"
+SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
 
 
 connect()
 {
     if [ -z "$(ps -ef | egrep ${REMOTE_VPN_IP}:${LOCAL_VPN_IP} | grep -v grep)" ]
     then
+        if $TEMP_KEY
+        then
+            echo "Create temporary key file $SSH_KEYFILE"
+            echo $$SSH_KEY > $SSH_KEYFILE
+        fi
         sudo -E ${CMD_PPPD} updetach noauth silent nodeflate ifname $LOCAL_IFNAME \
         pty "${CMD_SSH} ${SSH_OPTION} -i ${SSH_KEYFILE} -p $SSH_PORT ${SSH_USER}@${SSH_HOST} \
             sudo ${CMD_PPPD} nodetach notty noauth ifname ${REMOTE_IFNAME} \
@@ -77,8 +96,15 @@ stop()
     if [ -f $PID_FILE ]
     then
         cat $PID_FILE | xargs sudo kill
-        rm $PID_FILE
+        [ -f $PID_FILE ] && rm $PID_FILE
+        $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
     fi
 }
 
-[ -z $1 ] && echo "$0 start|stop" || $1
+restart()
+{
+	stop
+	start
+}
+
+[ -z $1 ] && echo "$0 start|stop|restart" || $1
