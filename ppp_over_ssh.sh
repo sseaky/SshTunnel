@@ -95,7 +95,7 @@ stop()
     disconnect
     if [ -f $PID_FILE ]
     then
-        cat $PID_FILE | xargs sudo kill
+        ps -p `cat $PID_FILE` > /dev/null && cat $PID_FILE | xargs sudo kill
         [ -f $PID_FILE ] && rm $PID_FILE
         $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
     fi
