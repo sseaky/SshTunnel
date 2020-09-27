@@ -2,12 +2,12 @@
 # @Author: Seaky
 # @Date:   2020/9/1 9:30
 
-# auth
+# authentication
 SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
 SSH_KEYFILE=''
-# paste the content of the private key to $SSH_KEY, avoid to upload the key to server
+# paste the content of the private key to $SSH_KEY, if do not want to upload the key to server
 SSH_KEY=''
 
 # local
@@ -26,10 +26,15 @@ REMOTE_NETWORK=''
 CHECK_INTERVAL=60
 PROMPT_INTERVAL=3600
 
+TEMP_DIR='./tmp'
 
 # auto set a ifname if it is not assigned
 [ -z $LOCAL_IFNAME ] && LOCAL_IFNAME="to_"${SSH_HOST}
 [ -z $REMOTE_IFNAME ] && REMOTE_IFNAME="to_"$(hostname)
+
+# create tmp folder
+[ ! -d "$TEMP_DIR" ] && mkdir $TEMP_DIR
+[ ! -d "$TEMP_DIR" ] && echo "Create temp dir $TEMP_DIR fail" && exit 1
 
 # verify ssh key
 TEMP_KEY=false
@@ -37,14 +42,14 @@ if [ -z "$SSH_KEYFILE" ]
 then
         if [ -n "$SSH_KEY" ]
         then
-            SSH_KEYFILE="$(basename $0)_${LOCAL_IFNAME}.tmpkey"
+            SSH_KEYFILE="$TEMP_DIR/$(basename $0)-${LOCAL_IFNAME}.tmpkey"
         TEMP_KEY=true
         fi
 fi
 
 [ -z "$SSH_KEYFILE" ] && echo "no ssh key given." && exit 1
 
-PID_FILE="$(basename $0)_${LOCAL_IFNAME}.pid"
+PID_FILE="$TEMP_DIR/$(basename $0)-${LOCAL_IFNAME}.pid"
 SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
 
 
