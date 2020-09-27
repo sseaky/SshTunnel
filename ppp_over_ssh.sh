@@ -55,7 +55,10 @@ connect()
         if $TEMP_KEY
         then
             echo "Create temporary key file $SSH_KEYFILE"
-            echo $$SSH_KEY > $SSH_KEYFILE
+            # need reset IFS if "\n" in $SSH_KEY, when echo the variable to a file
+            IFS=""
+            echo $SSH_KEY > $SSH_KEYFILE
+            unset IFS
         fi
 
         sudo -E ${CMD_PPPD} updetach noauth silent nodeflate ifname $LOCAL_IFNAME \
@@ -78,22 +81,35 @@ connect()
 
 disconnect()
 {
+    echo "\nStop interface $LOCAL_IFNAME\n"
+    # delete route
     [ -n "$REMOTE_NETWORK" ] &&
         for nw in $REMOTE_NETWORK
             do
                 [ -n "$(ip route get $nw | grep $REMOTE_VPN_IP)" ] && sudo ip route del $nw via $REMOTE_VPN_IP
             done
+
+    # delete ppp pid
+    ppp_pids="$(ps -ef | egrep ${REMOTE_VPN_IP}:${LOCAL_VPN_IP} | grep -v grep | awk '{print $2}')"
+    [ -n "$ppp_pids" ] && sudo kill $ppp_pids
+
+    # delete temporary key
+    $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
+
+    # delete pid file
     if [ -f $PID_FILE ]
     then
-        [ -n "$(ps -o pid= -p `cat $PID_FILE`)" ] && cat $PID_FILE | xargs sudo kill
-         rm $PID_FILE
+        pid=$(cat $PID_FILE)
+        rm $PID_FILE
+#        [ -n "$(ps -o pid= -p $pid)" -a $pid -ne $$ ] && sudo kill $pid
+        [ -n "$(ps -o pid= -p $pid)" ] && sudo kill $pid
     fi
-    $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
 }
 
 
 start()
 {
+    echo "\nStart create ppp over ssh to $REMOTE_IFNAME use $LOCAL_IFNAME\n"
     i=0
     while true
     do
@@ -127,6 +143,13 @@ restart()
 {
         stop
         start
+}
+
+trap ctrl_c INT
+
+ctrl_c()
+{
+    stop
 }
 
 [ -z $1 ] && echo "$0 start|stop|restart" || $1
