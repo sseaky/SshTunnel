@@ -83,8 +83,11 @@ disconnect()
             do
                 [ -n "$(ip route get $nw | grep $REMOTE_VPN_IP)" ] && sudo ip route del $nw via $REMOTE_VPN_IP
             done
-    [ -f $PID_FILE -a -n "$(ps -o pid= -p `cat $PID_FILE`)" ] && cat $PID_FILE | xargs sudo kill
-    [ -f $PID_FILE ] && rm $PID_FILE
+    if [ -f $PID_FILE ]
+    then
+        [ -n "$(ps -o pid= -p `cat $PID_FILE`)" ] && cat $PID_FILE | xargs sudo kill
+         rm $PID_FILE
+    fi
     $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
 }
 
