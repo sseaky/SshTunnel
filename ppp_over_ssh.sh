@@ -7,7 +7,7 @@ SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
 SSH_KEYFILE=''
-# paste the content of the private key to $SSH_KEY for skipping duplicate the key to server
+# paste the content of the private key to $SSH_KEY, avoid to upload the key to server
 SSH_KEY=''
 
 # local
@@ -26,6 +26,7 @@ REMOTE_NETWORK=''
 CHECK_INTERVAL=60
 PROMPT_INTERVAL=3600
 
+
 # auto set a ifname if it is not assigned
 [ -z $LOCAL_IFNAME ] && LOCAL_IFNAME="to_"${SSH_HOST}
 [ -z $REMOTE_IFNAME ] && REMOTE_IFNAME="to_"$(hostname)
@@ -34,11 +35,11 @@ PROMPT_INTERVAL=3600
 TEMP_KEY=false
 if [ -z "$SSH_KEYFILE" ]
 then
-	if [ -n "$SSH_KEY" ]
-	then
-	    SSH_KEYFILE="$(basename $0)_${LOCAL_IFNAME}.tmpkey"
+        if [ -n "$SSH_KEY" ]
+        then
+            SSH_KEYFILE="$(basename $0)_${LOCAL_IFNAME}.tmpkey"
         TEMP_KEY=true
-	fi
+        fi
 fi
 
 [ -z "$SSH_KEYFILE" ] && echo "no ssh key given." && exit 1
@@ -56,24 +57,35 @@ connect()
             echo "Create temporary key file $SSH_KEYFILE"
             echo $$SSH_KEY > $SSH_KEYFILE
         fi
+
         sudo -E ${CMD_PPPD} updetach noauth silent nodeflate ifname $LOCAL_IFNAME \
         pty "${CMD_SSH} ${SSH_OPTION} -i ${SSH_KEYFILE} -p $SSH_PORT ${SSH_USER}@${SSH_HOST} \
             sudo ${CMD_PPPD} nodetach notty noauth ifname ${REMOTE_IFNAME} \
             ipparam vpn ${VPNN} ${REMOTE_VPN_IP}:${LOCAL_VPN_IP}"
-        [ -n "$REMOTE_NETWORK" ] && for nw in $REMOTE_NETWORK; do sudo ip route add $nw via $REMOTE_VPN_IP; done
+
+        # add route
+        [ -n "$REMOTE_NETWORK" ] && for nw in $REMOTE_NETWORK
+        do
+            cmd="ip route add $nw via $REMOTE_VPN_IP"
+            echo $cmd
+            sudo $cmd;
+        done
     else
         true
-#        echo "$(date)  Tunnel ${LOCAL_IFNAME} is running"
     fi
+    [ -n "$(ip a show up | grep $LOCAL_VPN_IP)" ] && return 0 || return 1
 }
 
 disconnect()
 {
-    if [ -n "$(ps -ef | egrep ${REMOTE_VPN_IP}:${LOCAL_VPN_IP} | grep -v grep)" ]
-    then
-        [ -n "$REMOTE_NETWORK" ] && for nw in $REMOTE_NETWORK; do sudo ip route del $nw via $REMOTE_VPN_IP; done
-        ps -ef | grep ${REMOTE_VPN_IP}:${LOCAL_VPN_IP} | grep -v grep | awk '{print $2}' | xargs sudo kill
-    fi
+    [ -n "$REMOTE_NETWORK" ] &&
+        for nw in $REMOTE_NETWORK
+            do
+                [ -n "$(ip route get $nw | grep $REMOTE_VPN_IP)" ] && sudo ip route del $nw via $REMOTE_VPN_IP
+            done
+    [ -f $PID_FILE -a -n "$(ps -o pid= -p `cat $PID_FILE`)" ] && cat $PID_FILE | xargs sudo kill
+    [ -f $PID_FILE ] && rm $PID_FILE
+    $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
 }
 
 
@@ -82,15 +94,21 @@ start()
     i=0
     while true
     do
+        flag_connected=false
         if [ -f $PID_FILE ]
         then
             [ $(cat ${PID_FILE}) != $$ ] && echo "Pid file $PID_FILE is already exist." && exit 1
-            connect
+            connect && flag_connected=true
         else
-            connect
             echo $$ > $PID_FILE
+            connect && flag_connected=true
         fi
-        [ $i -eq 0 ] && echo "$(date)  Tunnel ${LOCAL_IFNAME} is running"
+        if $flag_connected
+        then
+            [ $i -eq 0 ] && echo "$(date)  Tunnel ${LOCAL_IFNAME} is running"
+        else
+            echo "$(date)  Tunnel ${LOCAL_IFNAME} is fail!"
+        fi
         sleep $CHECK_INTERVAL
         i=$((i+$CHECK_INTERVAL))
         [ $i -ge $PROMPT_INTERVAL ] && i=0
@@ -100,18 +118,12 @@ start()
 stop()
 {
     disconnect
-    if [ -f $PID_FILE ]
-    then
-        [ -n "$(ps -o pid= -p `cat $PID_FILE`)" ] && cat $PID_FILE | xargs sudo kill
-        [ -f $PID_FILE ] && rm $PID_FILE
-        $TEMP_KEY && [ -f $SSH_KEYFILE ] && rm $SSH_KEYFILE
-    fi
 }
 
 restart()
 {
-	stop
-	start
+        stop
+        start
 }
 
 [ -z $1 ] && echo "$0 start|stop|restart" || $1
