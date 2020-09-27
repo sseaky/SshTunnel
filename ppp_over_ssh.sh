@@ -43,7 +43,7 @@ then
         if [ -n "$SSH_KEY" ]
         then
             SSH_KEYFILE="$TEMP_DIR/$(basename $0)-${LOCAL_IFNAME}.tmpkey"
-        TEMP_KEY=true
+            TEMP_KEY=true
         fi
 fi
 
@@ -63,6 +63,7 @@ connect()
             # need reset IFS if "\n" in $SSH_KEY, when echo the variable to a file
             IFS=""
             echo $SSH_KEY > $SSH_KEYFILE
+            chmod 600 $SSH_KEYFILE
             unset IFS
         fi
 
