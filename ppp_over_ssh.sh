@@ -18,7 +18,7 @@ LOCAL_VPN_IP='10.220.0.102'
 
 # remote
 REMOTE_IFNAME=''
-REMOTE_VPN_IP='10.222.0.101'
+REMOTE_VPN_IP='10.220.0.101'
 VPNN=100
 REMOTE_NETWORK=''
 #REMOTE_NETWORK='1.1.1.1 2.2.2.0/24'    # network via remote vpn, split by space
