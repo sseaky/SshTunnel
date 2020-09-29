@@ -2,10 +2,16 @@
 # @Author: Seaky
 # @Date:   2020/9/1 9:30
 
-# authentication
+##########
+#        #
+# Config #
+#        #
+##########
+
 SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
+SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes"
 SSH_KEYFILE=''
 # paste the content of the private key to $SSH_KEY, if do not want to upload the key to server
 SSH_KEY=''
@@ -28,6 +34,14 @@ PROMPT_INTERVAL=3600
 
 TEMP_DIR='./tmp'
 
+######
+#    #
+# Do #
+#    #
+######
+
+PID_FILE="$TEMP_DIR/$(basename $0)-${LOCAL_IFNAME}.pid"
+
 # auto set a ifname if it is not assigned
 [ -z $LOCAL_IFNAME ] && LOCAL_IFNAME="to_"${SSH_HOST}
 [ -z $REMOTE_IFNAME ] && REMOTE_IFNAME="to_"$(hostname)
@@ -48,9 +62,6 @@ then
 fi
 
 [ -z "$SSH_KEYFILE" ] && echo "no ssh key given." && exit 1
-
-PID_FILE="$TEMP_DIR/$(basename $0)-${LOCAL_IFNAME}.pid"
-SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
 
 
 connect()
