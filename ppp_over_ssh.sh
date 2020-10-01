@@ -11,7 +11,7 @@
 SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
-SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes"
+SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes -o ControlPersist=no -o ControlPath=no"
 SSH_KEYFILE=''
 # paste the content of the private key to $SSH_KEY, if do not want to upload the key to server
 SSH_KEY=''

@@ -8,20 +8,23 @@
 #        #
 ##########
 
-SSH_HOST=''
+SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
+SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes -o ControlPersist=no -o ControlPath=no"
 SSH_KEYFILE=''
 # add content of private key to $SSH_KEY for skipping duplicate private key to server
 SSH_KEY=''
 
 # bind
-LOCAL_ADDRESS=""
-LOCAL_PORT=33061
-REMOTE_ADDRESS=""
+LOCAL_ADDRESS="127.0.0.1"
+LOCAL_PORT=6033
+REMOTE_ADDRESS="127.0.0.1"
 REMOTE_PORT=3306
 
 TEMP_DIR='./tmp'
+
+RETRY_DELAY=5
 
 
 ######
@@ -46,8 +49,6 @@ then
 fi
 [ -z "$SSH_KEYFILE" ] && echo "no ssh key given." && exit 1
 
-FIN=false
-
 create_tmp_key()
 {
     if $TEMP_KEY
@@ -68,27 +69,36 @@ delete_tmp_key()
 
 check_ps()
 {
-    ps -ef | grep "$*" | grep -v grep
+    ps -ef  | grep -v grep | grep -- "$*"
+}
+
+forward_local_flow_to_remote_service()
+{
+    [ -n "$(lsof -i@$LOCAL_ADDRESS:$LOCAL_PORT)" ] && echo "Error: $LOCAL_ADDRESS:$LOCAL_PORT is in use." && stop
+    cmd="ssh -N -L ${LOCAL_ADDRESS}:${LOCAL_PORT}:${REMOTE_ADDRESS}:${REMOTE_PORT} -i ${SSH_KEYFILE} $SSH_OPTION -p $SSH_PORT ${SSH_USER}@${SSH_HOST}"
+    [ -n "$(check_ps $cmd)" ] && echo "Error: Forwarding is exist" && stop
+    create_tmp_key
+    echo "Access of local ${LOCAL_ADDRESS}:${LOCAL_PORT} will be forward to remote service ${REMOTE_ADDRESS}:${REMOTE_PORT}"
+    $cmd
+}
+
+forward_remote_flow_to_local_service()
+{
+    cmd="ssh -N -R ${REMOTE_ADDRESS}:${REMOTE_PORT}:${LOCAL_ADDRESS}:${LOCAL_PORT} -i ${SSH_KEYFILE} $SSH_OPTION -p $SSH_PORT ${SSH_USER}@${SSH_HOST}"
+    [ -n "$(check_ps $cmd)" ] && echo "Error: Forwarding is exist" && stop
+    echo "Access of remote ${REMOTE_ADDRESS}:${REMOTE_PORT} will be forward to local service ${LOCAL_ADDRESS}:${LOCAL_PORT}"
+    create_tmp_key
+    $cmd
 }
 
 connect()
 {
-    [ "$1" = "ltor" -a -n "$(lsof -i@$LOCAL_ADDRESS:$LOCAL_PORT)" ] && echo "$LOCAL_ADDRESS:$LOCAL_PORT is in use." && exit
-    create_tmp_key
-    direct=$([ "$1" = "ltor" ] && echo "-L" || echo "-R" )
-    cmd="ssh -N $direct ${LOCAL_ADDRESS}:${LOCAL_PORT}:${REMOTE_ADDRESS}:${REMOTE_PORT} -i ${SSH_KEYFILE} $SSH_OPTION -p $SSH_PORT ${SSH_USER}@${SSH_HOST}"
-    if [ -z "$(check_ps $cmd)" ]
+    if [ "$1" = "ltor" ]
     then
-        if [ -n "$(check_ps $LOCAL_PORT)" ]
-        then
-            echo "Error: local port $LOCAL_PORT has been occupied."
-            exit 1
-        fi
-        echo "$(date) Forwarding ${LOCAL_ADDRESS}:${LOCAL_PORT}:${REMOTE_ADDRESS}:${REMOTE_PORT}@${SSH_HOST} start"
-        $cmd
-    else
-        echo "$(date) Forwarding "${LOCAL_ADDRESS}:${LOCAL_PORT}:${REMOTE_ADDRESS}:${REMOTE_PORT}@${SSH_HOST}" is running."
-        exit 1
+        forward_local_flow_to_remote_service
+    elif [ "$1" = "rtol" ]
+    then
+        forward_remote_flow_to_local_service
     fi
 }
 
@@ -97,20 +107,18 @@ start()
     while true
     do
         connect $1
-        $FIN && exit
-        sleep 5
+        sleep $RETRY_DELAY
     done
 }
 
 stop()
 {
-    FIN=true
     delete_tmp_key
+    exit
 }
 
 ctrl_c()
 {
-
     stop
 }
 
