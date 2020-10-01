@@ -8,10 +8,12 @@
 #        #
 ##########
 
+DESCRIPTION="My Tunnel"
+
 SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
-SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes -o ControlPersist=no -o ControlPath=no"
+SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes -o ControlPersist=no -o ControlMaster=no -o ControlPath=no"
 SSH_KEYFILE=''
 # paste the content of the private key to $SSH_KEY, if do not want to upload the key to server
 SSH_KEY=''
@@ -45,6 +47,7 @@ PID_FILE="$TEMP_DIR/$(basename $0)-${LOCAL_IFNAME}.pid"
 # auto set a ifname if it is not assigned
 [ -z $LOCAL_IFNAME ] && LOCAL_IFNAME="to_"${SSH_HOST}
 [ -z $REMOTE_IFNAME ] && REMOTE_IFNAME="to_"$(hostname)
+[ -n "$DESCRIPTION" ] && DESCRIPTION=${LOCAL_IFNAME}"(${DESCRIPTION})" || DESCRIPTION=${LOCAL_IFNAME}
 
 # create tmp folder
 [ ! -d "$TEMP_DIR" ] && mkdir $TEMP_DIR

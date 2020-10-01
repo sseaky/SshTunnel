@@ -11,7 +11,7 @@
 SSH_HOST='remote.server'
 SSH_PORT=22
 SSH_USER=''
-SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes -o ControlPersist=no -o ControlPath=no"
+SSH_OPTION="-o StrictHostKeyChecking=no -o ConnectTimeout=10 -o TCPKeepAlive=yes -o ControlPersist=no -o ControlMaster=no -o ControlPath=no"
 SSH_KEYFILE=''
 # add content of private key to $SSH_KEY for skipping duplicate private key to server
 SSH_KEY=''
